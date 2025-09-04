@@ -1,5 +1,5 @@
 {% set python_min = "3.11" %}
-{% set version = "0.0.5" %}
+{% set version = "0.0.6" %}
 {% set name = "chemem" %}
 
 package:
@@ -8,7 +8,7 @@ package:
 
 source:
   url: https://github.com/SweeneyAaron/ChemEM/archive/refs/tags/v{{ version }}.tar.gz
-  sha256: 2c12fa3ea0859f9dc61ed6205bf773963254d3500f64d3b1c2bed66b5fc6af90
+  sha256: e60bffbaee427c5f46ca73be1016f6fc597bb272abd09a1e67bd566b7d7c1a91
 
 build:
   noarch: python
@@ -18,6 +18,7 @@ build:
     - chemem = ChemEM.chemem:main
     - chemem.test = ChemEM.chemem:test
     - chemem.protonate = ChemEM.chemem:protonate
+    - chemem.alpha_mask = ChemEM.chemem:alpha_mask
 
 requirements:
   host:
