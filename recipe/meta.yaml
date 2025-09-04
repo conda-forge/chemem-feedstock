@@ -9,10 +9,11 @@ package:
 source:
   url: https://github.com/SweeneyAaron/ChemEM/archive/refs/tags/v{{ version }}.tar.gz
   sha256: e60bffbaee427c5f46ca73be1016f6fc597bb272abd09a1e67bd566b7d7c1a91
-
+  patches:
+    - 0001-small-fix.patch
 build:
   noarch: python
-  number: 0
+  number: 1
   script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
   entry_points:
     - chemem = ChemEM.chemem:main

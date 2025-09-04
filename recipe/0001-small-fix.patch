@@ -1,0 +1,336 @@
+From 1d737c248205c4bd350eeb6a0425b08f0e7f4b83 Mon Sep 17 00:00:00 2001
+From: Aaron Sweeney <ucbtasw@ucl.ac.uk>
+Date: Thu, 4 Sep 2025 16:47:31 +0200
+Subject: [PATCH] Small fix: changed alpha-mask to entry-point from conf file
+
+---
+ ChemEM/__init__.py                            |   2 +-
+ ChemEM/__pycache__/__init__.cpython-311.pyc   | Bin 209 -> 209 bytes
+ ChemEM/__pycache__/messages.cpython-311.pyc   | Bin 12065 -> 12787 bytes
+ ChemEM/chemem.py                              |  10 +-
+ ChemEM/messages.py                            |   8 +
+ .../__pycache__/alpha_mask.cpython-311.pyc    | Bin 11275 -> 11441 bytes
+ ChemEM/protocols/alpha_mask.py                |   2 +
+ chemem.py                                     | 144 ++++++++++++++++++
+ 8 files changed, 162 insertions(+), 4 deletions(-)
+ create mode 100644 chemem.py
+
+diff --git a/ChemEM/__init__.py b/ChemEM/__init__.py
+index ed7e69e..06d7050 100644
+--- a/ChemEM/__init__.py
++++ b/ChemEM/__init__.py
+@@ -8,7 +8,7 @@
+ 
+ 
+ 
+-__version__ = '0.0.4'
++__version__ = '0.0.6'
+ #from .config import Config
+ #from .messages import Messages
+ #from .system import System
+diff --git a/ChemEM/__pycache__/__init__.cpython-311.pyc b/ChemEM/__pycache__/__init__.cpython-311.pyc
+index 7de1ea311e93b2d4cbb25b6c485de2585ee5a8fc..d1fd088bd4b72ff80aa0b46d8b0344c3696a4275 100644
+GIT binary patch
+delta 23
+dcmcb}c#)B7IWI340}$L@IFZYU(QKma6aY%k23`OF
+
+delta 23
+dcmcb}c#)B7IWI340}#xMoycXxXfn}u3IIjz1=#=q
+
+diff --git a/ChemEM/__pycache__/messages.cpython-311.pyc b/ChemEM/__pycache__/messages.cpython-311.pyc
+index 17396a32b21420e43ad3f48e8af3fe81790f76f5..f0f2964b2c22b752abb55bd702e03fe49ac11c4c 100644
+GIT binary patch
+delta 398
+zcmZ1&_c@twIWI340}y;$v@_$I+C;t(#$y|k*E7nbGN*{NFf0SgtOiMgL6mrkXfT7O
+z*k%c)3Ta*i1qH{Pf{a96-^AkV$sd^%H~Vq3Gb(T;f&}Apfr3@SzNy8<iRr1udI-VI
+z@8#SXH&2j_XJky@{6TIi6Jy@yHpM<h#?sBA%E63`m6J17J}}l!j#8b@rVF&TNPqHo
+zRV&7Z$wq3E8FeQgQww5j*(|C4hf&fRC|e~2w<5nRwWz!(vm~`+v!13UBcsLS3@t~-
+z36oc8tp>8gwCx$EO`fK0#3(WOq;{630?24h5TOks3_yeth%f^YAft<HL4^I}a2-WP
+z$IX>GvW$}xbZs_o*A-_Bb^%H;0&%e;kodsN$jJCXD1eF4_yYrW@*`OM3l7;LPM|3O
+DA&zW+
+
+delta 301
+zcmeyIyfBV$IWI340}%X(-I>v<GLbKYal^*s^^9yOBEbxrqMP-YDx^0%Da11}#&1rL
+z@nqcmTFHlzF>SMjN*^O*?&jmF!HkTBlcm)^FqTf{(U{Jr4K%7qck)UNE5?e+Pc$Yo
+zYEQ1v3}UR=d|LAlqogHJwo1r1wYWGjJ+)Xbzbv(=yeP9IwPEuEZA(T*v&mArj*K0X
+zV{}&o*&KTIjD3?m^o$tACs*rbsi=dD)&voHAi@Adn1Be7sYTWx!geyBz9OUAW&?d$
+o#>uPo6*qSph%+)eO<rgyZ12IuX#9ZzJNXeT{so6@5hu`W01u8)1ONa4
+
+diff --git a/ChemEM/chemem.py b/ChemEM/chemem.py
+index 954bbba..16e9cc3 100644
+--- a/ChemEM/chemem.py
++++ b/ChemEM/chemem.py
+@@ -13,7 +13,7 @@ import ChemEM
+ from ChemEM.config import Config
+ from ChemEM.messages import Messages
+ from ChemEM.tools.rdtools import RDTools
+-
++from ChemEM.protocol import protocol_selector
+ 
+ def test():
+     
+@@ -24,8 +24,9 @@ def test():
+ 
+ def alpha_mask():
+     #TODO DRY Move to system function
++    print(Messages.intro(ChemEM.__version__))
+     if len(sys.argv) != 2:
+-        Messages.alpha_mask_usage()
++        print(Messages.alpha_mask_usage())
+         sys.exit(1)
+     
+     conf_file = sys.argv[1]
+@@ -37,6 +38,9 @@ def alpha_mask():
+         # read conf file
+         config = Config()
+         new_system = config.load_config(conf_file)
++        new_system.protocols = []
++        new_system.add_protocol(protocol_selector('alpha_mask'))
++        
+     
+     except Exception as e:
+         print(Messages.fatal_exception('Main', e))
+@@ -48,7 +52,7 @@ def alpha_mask():
+ def protonate():
+     
+     if len(sys.argv) != 2:
+-        Messages.protonation_usage()
++        print(Messages.protonation_usage())
+         sys.exit(1)
+     
+     conf_file = sys.argv[1]
+diff --git a/ChemEM/messages.py b/ChemEM/messages.py
+index 6492cd9..4be2d69 100644
+--- a/ChemEM/messages.py
++++ b/ChemEM/messages.py
+@@ -92,6 +92,14 @@ class Messages:
+ ║                                    Fitting                                  ║
+ ╚═════════════════════════════════════════════════════════════════════════════╝
+ """
++    @staticmethod 
++    def alpha_mask():
++        return """
++╔═════════════════════════════════════════════════════════════════════════════╗
++║                                  Alpha-Mask                                 ║
++╚═════════════════════════════════════════════════════════════════════════════╝
++"""
++
+     @staticmethod 
+     def post_processing():
+         return """
+diff --git a/ChemEM/protocols/__pycache__/alpha_mask.cpython-311.pyc b/ChemEM/protocols/__pycache__/alpha_mask.cpython-311.pyc
+index 932d0e822bb8d43afc0bb71c61e5c31a3bab583c..45fa3b1b57cb84db9ed577070d06d65d41c47498 100644
+GIT binary patch
+delta 1372
+zcma)+U1%It6vyZ8=j_K!_A6s13A&q2H<>0)<7y0P)pUu$hO$!ARN7QnH<^u_xRY7$
+z>>`b|1}Q}l3E^PtW3<pd7+T`?!M-UzD5%gvDD8kRif@8#^{Mos=gfxE#R^__etYNK
+zbI$$WbMKu`j%^*6E=f{Qz&3K>T6tw%QrYM0eeVwHOb=9IMtnBT1efrtpa;(gdg!7{
+z5Wd2v*=7^E>xiI*x4xNnhc#x4`I2Q7-!55=pr_851gqXNEZgw<_R~wwp9#k?&|-)r
+zPk`l5v$4i`|0<1k1ct-UJU%)Tc$OW2vw;&#f!_iP=rR@D*Xpts+|Q=qr(lLDjeEf&
+zV+oiE=h$I5hiVk~Hmt|8l#&D|aYp>(BQP%SgQ~RKaZur^G|5KczVzIaT}Rk7)aAXR
+zg0Y&955lIrr&Yus@(9aASDS?i*V;Z}IfzAewYp41G&Tc9WYC#20hc3Rvq>mM+kFQ~
+zQVvc<H5P}9(Y?5Wo6(opaY)3BrgP(5Y?h(--T0xgL*y+J+6Z|9WzamF3d^4-945Su
+zusnz)HY{~LF~;WLO5#UHqzdcpCx#|*SaWkf`AZ1f&FjmW%SmPXYh_+Aiq%K8gHC0X
+znJ}#kV6jgt-7e9Ik8=sW?8y3ZlqCvwM>cenx^EED@RVAPkThGIH>)QpA)kXaRbz{A
+zO-<rzZ8gO#c%c4;S^w-@@%o|^I1H8K+UNpxi-bi&nh+z5BW&+ViJKOmBf|m5uuw6J
+zHLgQ8l^avZ+)3ynbdy8iJ-%2g6%0Pl3-s<WtEFYzvt*e_y>3*sE*^)?)F4a4?bH`+
+z3EuDNLyZ@DH1=8Jm!22g8kN+I&)+xk5T6%nbd+~mjqE#Z$pzmj3VaZf8y{ynndg+S
+z5rnO$d*H2%mxUhn!cK3a&;OxQONsBocpe~h5R!yFgnq&VVTv$KI7WDrU=lV6kKZ7A
+zpGB-lxk|NM%onY9hH!^}N0aq4VpaH6ls+wQ%c&c(oZgnxH^km;vG=;z3v&NeJSgAy
+z4;*c$EJ=bR!4dO6bkMwflt34!dGkWlBMifY_QNY7Z}%PH-)IJqo7Qgo3kBVrFBG`5
+zof%4S7GZmrakozLad>U_=D6K9Q7##i`5|NH>(i{DGhM5M`{Ij+sn;u|m-%H(Lz`#a
+ggY>|qBe#U!>#e^#p3^Rd3ZKloj{Tqi7<Jb05aK#CB>(^b
+
+delta 1298
+zcma)+U1$?o6vyYJlh4ki=_DzMt(vB^I;PvtwOT)FvlJ|@u3sx_w_prOG_CpCI|*V@
+z@S#44ik2fPKIrzvK3EhtinxO8LQx;~W#5*062;f8icbro=S*?6t_xnsZ|*(!e?D^V
+z+_^P!YOgw@sve2P$>P0i*OVHD(^D&cirA#hQrbN!r9Ibdl60MZ3*$#EZQCvBwYTPW
+z)l{Q$1wg?|_DSfjE_JNu#fY;_(MW3mAtL;E%Gm;It2dp;dAG~mr7Zh+H|Oq#O?bsU
+z>IjlK1vo7S(C^ts+N5XQV(pA)Jq+VBPa6a=;Rsh-YKH;*m{a1g9d9T)ng3GKS~th%
+zf+Lik9^z~KPF)Q<a8m6cNmbnkeW-bRKQCN|Q{I@1i_sk-hI8Jp78mixyBfA)Z=FG*
+z&IQBxTiqB8;woS3V%exqhuwI>*G{rud=Hz3tbnGP8WX8X-Y8`=B4dcnT;3p_uh&7t
+z2lbuwZ~m^|2z#+z%R{hwSt|exp*!$x{}xuN3@>9VgS~ZGaJNM-V>@F9!H@|N8r1(Y
+zfqqEhqrhXU;BtpmNsVx_Rw0-*qEgUpRv6P+&Wc1nS^Bqs*we5E3OL>nqk1khG}&C1
+zzh5Z$YpBOD$WeUwD%4Z^Jx}*AqSzVE`nW99l`58wa6pm7nXnF7{4*SB;ZreP2Qy{b
+zF%C^=@mwjJ+(y%m_cnonCG(U~Zk(_?d>phBCnIOqWO%xtk!3^~^^5_6X`jf5q9KxO
+z*kl<F<ci6%Na2>|cz=k^Va5_hBMaPz#aKC$$cvQN$7{J*$`nj_+$a*$m3&EW6dKMo
+zw?h<PHcu;KEP?|DJL7aTWMAm<{iqJ-tIwl-H8?A~-52QHzbGA*e#WU~0esR>hv(Yt
+z0M=?g=#y#3_I^<vZwmpw4cZS{jrEA-6k4=1RxrL{3^R5zeqf9;3XH3ak1rIjM+g(@
+zho;i`J|&ZJhj3iN(<^V&s}R>?djhPs@>!{@q+gJa<BL89Uz3G9#-9+u=)~XkM?)Ta
+z(+lapSa4vO?l+x@M7o$tB!qP^tsLM4!L%2s??=P{{;_ISw_<*h>>t;Ld@)_gWd_77
+fIq-+Zc!GChGw~PlF&j|k&-0~afBiqZR&DP9@RBH*
+
+diff --git a/ChemEM/protocols/alpha_mask.py b/ChemEM/protocols/alpha_mask.py
+index 8ca9535..eba7d4b 100644
+--- a/ChemEM/protocols/alpha_mask.py
++++ b/ChemEM/protocols/alpha_mask.py
+@@ -43,6 +43,7 @@ from ChemEM.tools.math import MathTools
+ from ChemEM.tools.map_tools import MapTools
+ from ChemEM.protocols.threshold_map import ConfidenceMap
+ from ChemEM.data_classes.EMMap import EMMap
++from ChemEM.messages import Messages
+ 
+ class AlphaMask:
+     
+@@ -224,6 +225,7 @@ class AlphaMask:
+        
+ 
+     def run(self):
++        print(Messages.alpha_mask())
+         self.mk_output() 
+         self.get_protein_structure()
+         self.set_grid_spacing()
+diff --git a/chemem.py b/chemem.py
+new file mode 100644
+index 0000000..16e9cc3
+--- /dev/null
++++ b/chemem.py
+@@ -0,0 +1,144 @@
++# This file is part of the ChemEM software.
++#
++# Copyright (c) 2023 - Topf Group & Leibniz Institute for Virology (LIV),
++# Hamburg, Germany.
++#
++# This module was developed by:
++#   Aaron Sweeney    <aaron.sweeney AT cssb-hamburg.de>
++
++
++import sys
++import os
++import ChemEM
++from ChemEM.config import Config
++from ChemEM.messages import Messages
++from ChemEM.tools.rdtools import RDTools
++from ChemEM.protocol import protocol_selector
++
++def test():
++    
++    print(Messages.test())
++    
++    sys.exit(0)
++
++
++def alpha_mask():
++    #TODO DRY Move to system function
++    print(Messages.intro(ChemEM.__version__))
++    if len(sys.argv) != 2:
++        print(Messages.alpha_mask_usage())
++        sys.exit(1)
++    
++    conf_file = sys.argv[1]
++    if conf_file in ['-h', '--help']:
++        print('Usage chemem <config file>')
++        sys.exit(1)
++    try:
++        print(Messages.load_config())
++        # read conf file
++        config = Config()
++        new_system = config.load_config(conf_file)
++        new_system.protocols = []
++        new_system.add_protocol(protocol_selector('alpha_mask'))
++        
++    
++    except Exception as e:
++        print(Messages.fatal_exception('Main', e))
++        sys.exit(1)
++    
++    new_system.run()
++        
++
++def protonate():
++    
++    if len(sys.argv) != 2:
++        print(Messages.protonation_usage())
++        sys.exit(1)
++    
++    conf_file = sys.argv[1]
++    if os.path.exists(conf_file):
++        #is conf file 
++        try:
++            print(Messages.load_config())
++            # read conf file
++            config = Config()
++            new_system = config.load_config(conf_file)
++            
++            ligands = config.ligand
++            pH = new_system.pH 
++            n = new_system.pKa_prec
++            output = new_system.output
++            protonation_states = {}
++            
++        
++        except Exception as e:
++            Messages.fatal_exception('chemem.protonation', e)
++        
++        #if the file was read!
++        for lig in ligands:
++            try:
++                found_protonation_states = RDTools.protonate(lig, pH=pH, n=n)
++                protonation_states[lig] = found_protonation_states 
++                
++            except Exception as e:
++                Messages.chemem_warning('chemem.protonation', lig, e)
++                sys.exit()
++        
++        
++        if protonation_states:
++            out_file = ''
++            for key, value in protonation_states.items():
++                out_file += f'Input SMILES: {key}\nFound states at pH range {pH[0]} - {pH[1]}:\n'
++                for smi in value:
++                    out_file += f'\t{smi}\n'
++            
++            out_fn = os.path.join(output, 'protonation.txt')
++            with open( out_fn, 'w') as f:
++                f.write(out_file)
++            
++            print(f'Protonation states written to file: {out_fn}')
++            print("To indicate protonation states, indicate your prefered state in the configuration file along with 'protonation = False'")
++                
++        
++    else:
++        #is smiles
++        try:
++            protonation_states = RDTools.protonate(conf_file)
++            print('Protonation states identified:')
++            for state in protonation_states:
++                print(state)
++            
++                
++        except Exception as e:
++            Messages.fatal_exception('chemem.protonation', e)
++            
++
++def main():
++    print(Messages.intro(ChemEM.__version__))
++    if len(sys.argv) != 2:
++        print("Usage: chemem <config_file>")
++        sys.exit(1)
++    
++    conf_file = sys.argv[1]
++    if conf_file in ['-h', '--help']:
++        print('Usage chemem <config file>')
++        sys.exit(1)
++    try:
++        print(Messages.load_config())
++        # read conf file
++        config = Config()
++        new_system = config.load_config(conf_file)
++        
++        
++    except Exception as e:
++        print(Messages.fatal_exception('Main', e))
++        sys.exit(1)
++    #run ChemEM
++    new_system.run()
++
++if __name__ == "__main__":
++    
++    main()
++    
++    
++    
+\ No newline at end of file
+-- 
+2.37.1 (Apple Git-137.1)
+
