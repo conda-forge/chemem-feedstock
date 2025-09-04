@@ -1,0 +1,246 @@
+diff --git a/ChemEM/__init__.py b/ChemEM/__init__.py
+index ed7e69e..06d7050 100644
+--- a/ChemEM/__init__.py
++++ b/ChemEM/__init__.py
+@@ -8,7 +8,7 @@
+ 
+ 
+ 
+-__version__ = '0.0.4'
++__version__ = '0.0.6'
+ #from .config import Config
+ #from .messages import Messages
+ #from .system import System
+diff --git a/ChemEM/chemem.py b/ChemEM/chemem.py
+index 954bbba..16e9cc3 100644
+--- a/ChemEM/chemem.py
++++ b/ChemEM/chemem.py
+@@ -13,7 +13,7 @@ import ChemEM
+ from ChemEM.config import Config
+ from ChemEM.messages import Messages
+ from ChemEM.tools.rdtools import RDTools
+-
++from ChemEM.protocol import protocol_selector
+ 
+ def test():
+     
+@@ -24,8 +24,9 @@ def test():
+ 
+ def alpha_mask():
+     #TODO DRY Move to system function
++    print(Messages.intro(ChemEM.__version__))
+     if len(sys.argv) != 2:
+-        Messages.alpha_mask_usage()
++        print(Messages.alpha_mask_usage())
+         sys.exit(1)
+     
+     conf_file = sys.argv[1]
+@@ -37,6 +38,9 @@ def alpha_mask():
+         # read conf file
+         config = Config()
+         new_system = config.load_config(conf_file)
++        new_system.protocols = []
++        new_system.add_protocol(protocol_selector('alpha_mask'))
++        
+     
+     except Exception as e:
+         print(Messages.fatal_exception('Main', e))
+@@ -48,7 +52,7 @@ def alpha_mask():
+ def protonate():
+     
+     if len(sys.argv) != 2:
+-        Messages.protonation_usage()
++        print(Messages.protonation_usage())
+         sys.exit(1)
+     
+     conf_file = sys.argv[1]
+diff --git a/ChemEM/messages.py b/ChemEM/messages.py
+index 6492cd9..4be2d69 100644
+--- a/ChemEM/messages.py
++++ b/ChemEM/messages.py
+@@ -92,6 +92,14 @@ class Messages:
+ ║                                    Fitting                                  ║
+ ╚═════════════════════════════════════════════════════════════════════════════╝
+ """
++    @staticmethod 
++    def alpha_mask():
++        return """
++╔═════════════════════════════════════════════════════════════════════════════╗
++║                                  Alpha-Mask                                 ║
++╚═════════════════════════════════════════════════════════════════════════════╝
++"""
++
+     @staticmethod 
+     def post_processing():
+         return """
+diff --git a/ChemEM/protocols/alpha_mask.py b/ChemEM/protocols/alpha_mask.py
+index 8ca9535..eba7d4b 100644
+--- a/ChemEM/protocols/alpha_mask.py
++++ b/ChemEM/protocols/alpha_mask.py
+@@ -43,6 +43,7 @@ from ChemEM.tools.math import MathTools
+ from ChemEM.tools.map_tools import MapTools
+ from ChemEM.protocols.threshold_map import ConfidenceMap
+ from ChemEM.data_classes.EMMap import EMMap
++from ChemEM.messages import Messages
+ 
+ class AlphaMask:
+     
+@@ -224,6 +225,7 @@ class AlphaMask:
+        
+ 
+     def run(self):
++        print(Messages.alpha_mask())
+         self.mk_output() 
+         self.get_protein_structure()
+         self.set_grid_spacing()
+diff --git a/chemem.py b/chemem.py
+new file mode 100644
+index 0000000..16e9cc3
+--- /dev/null
++++ b/chemem.py
+@@ -0,0 +1,144 @@
++# This file is part of the ChemEM software.
++#
++# Copyright (c) 2023 - Topf Group & Leibniz Institute for Virology (LIV),
++# Hamburg, Germany.
++#
++# This module was developed by:
++#   Aaron Sweeney    <aaron.sweeney AT cssb-hamburg.de>
++
++
++import sys
++import os
++import ChemEM
++from ChemEM.config import Config
++from ChemEM.messages import Messages
++from ChemEM.tools.rdtools import RDTools
++from ChemEM.protocol import protocol_selector
++
++def test():
++    
++    print(Messages.test())
++    
++    sys.exit(0)
++
++
++def alpha_mask():
++    #TODO DRY Move to system function
++    print(Messages.intro(ChemEM.__version__))
++    if len(sys.argv) != 2:
++        print(Messages.alpha_mask_usage())
++        sys.exit(1)
++    
++    conf_file = sys.argv[1]
++    if conf_file in ['-h', '--help']:
++        print('Usage chemem <config file>')
++        sys.exit(1)
++    try:
++        print(Messages.load_config())
++        # read conf file
++        config = Config()
++        new_system = config.load_config(conf_file)
++        new_system.protocols = []
++        new_system.add_protocol(protocol_selector('alpha_mask'))
++        
++    
++    except Exception as e:
++        print(Messages.fatal_exception('Main', e))
++        sys.exit(1)
++    
++    new_system.run()
++        
++
++def protonate():
++    
++    if len(sys.argv) != 2:
++        print(Messages.protonation_usage())
++        sys.exit(1)
++    
++    conf_file = sys.argv[1]
++    if os.path.exists(conf_file):
++        #is conf file 
++        try:
++            print(Messages.load_config())
++            # read conf file
++            config = Config()
++            new_system = config.load_config(conf_file)
++            
++            ligands = config.ligand
++            pH = new_system.pH 
++            n = new_system.pKa_prec
++            output = new_system.output
++            protonation_states = {}
++            
++        
++        except Exception as e:
++            Messages.fatal_exception('chemem.protonation', e)
++        
++        #if the file was read!
++        for lig in ligands:
++            try:
++                found_protonation_states = RDTools.protonate(lig, pH=pH, n=n)
++                protonation_states[lig] = found_protonation_states 
++                
++            except Exception as e:
++                Messages.chemem_warning('chemem.protonation', lig, e)
++                sys.exit()
++        
++        
++        if protonation_states:
++            out_file = ''
++            for key, value in protonation_states.items():
++                out_file += f'Input SMILES: {key}\nFound states at pH range {pH[0]} - {pH[1]}:\n'
++                for smi in value:
++                    out_file += f'\t{smi}\n'
++            
++            out_fn = os.path.join(output, 'protonation.txt')
++            with open( out_fn, 'w') as f:
++                f.write(out_file)
++            
++            print(f'Protonation states written to file: {out_fn}')
++            print("To indicate protonation states, indicate your prefered state in the configuration file along with 'protonation = False'")
++                
++        
++    else:
++        #is smiles
++        try:
++            protonation_states = RDTools.protonate(conf_file)
++            print('Protonation states identified:')
++            for state in protonation_states:
++                print(state)
++            
++                
++        except Exception as e:
++            Messages.fatal_exception('chemem.protonation', e)
++            
++
++def main():
++    print(Messages.intro(ChemEM.__version__))
++    if len(sys.argv) != 2:
++        print("Usage: chemem <config_file>")
++        sys.exit(1)
++    
++    conf_file = sys.argv[1]
++    if conf_file in ['-h', '--help']:
++        print('Usage chemem <config file>')
++        sys.exit(1)
++    try:
++        print(Messages.load_config())
++        # read conf file
++        config = Config()
++        new_system = config.load_config(conf_file)
++        
++        
++    except Exception as e:
++        print(Messages.fatal_exception('Main', e))
++        sys.exit(1)
++    #run ChemEM
++    new_system.run()
++
++if __name__ == "__main__":
++    
++    main()
++    
++    
++    
+\ No newline at end of file
